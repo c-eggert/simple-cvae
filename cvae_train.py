@@ -1,0 +1,21 @@
+import torch
+from torchvision import transforms
+from torchvision.datasets import MNIST
+import cvae
+
+
+transform_image = transforms.Compose([
+    transforms.Resize((11, 11), interpolation=transforms.InterpolationMode.BILINEAR),
+    transforms.ToTensor()])
+transform_label = transforms.Compose([
+    cvae.InputEncoderCategoricalToOneHot(num_classes=10, dtype=torch.int32)
+])
+
+
+mnist_train = MNIST(root='data', train=True, download=False, transform=transform_image, target_transform=transform_label)
+mnist_test = MNIST(root='data', train=False, download=False, transform=transform_image, target_transform=transform_label)
+
+loader_train = torch.utils.data.DataLoader(mnist_train, batch_size=64, shuffle=True)
+loader_test = torch.utils.data.DataLoader(mnist_test, batch_size=64, shuffle=False)
+
+
