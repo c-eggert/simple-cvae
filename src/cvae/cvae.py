@@ -5,16 +5,16 @@ from typing import Type, Tuple
 import torch
 import torch.nn as nn
 
-
 DEFAULT_FILM_TARGETS: tuple[Type[nn.Module], ...] = (
     nn.Conv2d,
     nn.ConvTranspose2d,
 )
 
 DEFAULT_OUTPUT_FEATURE_ATTRS: tuple[str, ...] = (
-    'out_features',
-    'out_channels',
+    "out_features",
+    "out_channels",
 )
+
 
 class FiLMLayer(nn.Module):
     def __init__(self, cond_dim: int, num_channels: int):
@@ -33,22 +33,28 @@ class FiLMLayer(nn.Module):
 
         # reshape for broadcasting over H, W
         gamma = gamma.unsqueeze(-1).unsqueeze(-1)  # [B, C, 1, 1]
-        beta  =  beta.unsqueeze(-1).unsqueeze(-1)  # [B, C, 1, 1]
+        beta = beta.unsqueeze(-1).unsqueeze(-1)  # [B, C, 1, 1]
 
         return gamma * h + beta
 
 
 class ConvBlock(nn.Module):
-    def __init__(self,
-                 in_channels_data: int,
-                 in_channels_cond: int,
-                 out_channels: int,
-                 num_groups: int,
-                 stride: int,
-                 padding: int):
+    def __init__(
+        self,
+        in_channels_data: int,
+        in_channels_cond: int,
+        out_channels: int,
+        num_groups: int,
+        stride: int,
+        padding: int,
+    ):
         super(ConvBlock, self).__init__()
-        self.conv = nn.Conv2d(in_channels_data, out_channels, 3, stride, padding=padding)
-        self.norm = nn.GroupNorm(num_groups=num_groups, num_channels=out_channels, affine=False)
+        self.conv = nn.Conv2d(
+            in_channels_data, out_channels, 3, stride, padding=padding
+        )
+        self.norm = nn.GroupNorm(
+            num_groups=num_groups, num_channels=out_channels, affine=False
+        )
         self.film = FiLMLayer(cond_dim=in_channels_cond, num_channels=out_channels)
         self.act = nn.SiLU()
 
@@ -64,28 +70,29 @@ class Encoder(nn.Module):
     def __init__(self, in_channels_data: int, in_channels_cond: int, out_channels: int):
         super(Encoder, self).__init__()
         # VAE encoder layers
-        self.conv1 = ConvBlock(                     # 11x11 -> 11x11
+        self.conv1 = ConvBlock(  # 11x11 -> 11x11
             in_channels_data=in_channels_data,
             in_channels_cond=in_channels_cond,
             out_channels=16,
             num_groups=4,
             stride=1,
-            padding=1)
-        self.conv2 = ConvBlock(                     # 11x11 -> 6x6
+            padding=1,
+        )
+        self.conv2 = ConvBlock(  # 11x11 -> 6x6
             in_channels_data=16,
             in_channels_cond=in_channels_cond,
             out_channels=32,
             num_groups=8,
             stride=2,
-            padding=1
+            padding=1,
         )
-        self.conv3 = ConvBlock(                     # 6x6 -> 3x3
+        self.conv3 = ConvBlock(  # 6x6 -> 3x3
             in_channels_data=32,
             in_channels_cond=in_channels_cond,
             out_channels=64,
             num_groups=8,
             stride=2,
-            padding=1
+            padding=1,
         )
         self.conv4 = ConvBlock(
             in_channels_data=64,
@@ -93,12 +100,14 @@ class Encoder(nn.Module):
             out_channels=128,
             num_groups=8,
             stride=1,
-            padding=1
+            padding=1,
         )
         self.latent_mu = nn.Linear(128, out_channels)
         self.latent_logvar = nn.Linear(128, out_channels)
 
-    def forward(self, data: torch.Tensor, condition: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(
+        self, data: torch.Tensor, condition: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         x = self.conv1(data, condition)
         x = self.conv2(x, condition)
         x = self.conv3(x, condition)
@@ -110,17 +119,27 @@ class Encoder(nn.Module):
 
 
 class UpConvBlock(nn.Module):
-    def __init__(self,
-                 in_channels_data: int,
-                 in_channels_cond: int,
-                 out_channels: int,
-                 num_groups: int,
-                 stride: int,
-                 padding: int):
+    def __init__(
+        self,
+        in_channels_data: int,
+        in_channels_cond: int,
+        out_channels: int,
+        num_groups: int,
+        stride: int,
+        padding: int,
+    ):
         super(UpConvBlock, self).__init__()
-        self.up = nn.Upsample(scale_factor=2, mode='nearest')
-        self.conv = nn.Conv2d(in_channels=in_channels_data, out_channels=out_channels, kernel_size=3, stride=1, padding=1)
-        self.norm = nn.GroupNorm(num_groups=num_groups, num_channels=out_channels, affine=False)
+        self.up = nn.Upsample(scale_factor=2, mode="nearest")
+        self.conv = nn.Conv2d(
+            in_channels=in_channels_data,
+            out_channels=out_channels,
+            kernel_size=3,
+            stride=1,
+            padding=1,
+        )
+        self.norm = nn.GroupNorm(
+            num_groups=num_groups, num_channels=out_channels, affine=False
+        )
         self.film = FiLMLayer(cond_dim=in_channels_cond, num_channels=out_channels)
         self.act = nn.SiLU()
 
@@ -152,18 +171,24 @@ class Decoder(nn.Module):
 
 
 class CVAE(nn.Module):
-    def __init__(self, in_channels_data: int, in_channels_cond: int, latent_channels: int):
+    def __init__(
+        self, in_channels_data: int, in_channels_cond: int, latent_channels: int
+    ):
         super(CVAE, self).__init__()
         self.encoder = Encoder(
             in_channels_data=in_channels_data,
             in_channels_cond=in_channels_cond,
-            out_channels=latent_channels)
+            out_channels=latent_channels,
+        )
         self.decoder = Decoder(
             in_latent_dim=latent_channels,
             in_channels_cond=in_channels_cond,
-            out_channels=in_channels_data)
+            out_channels=in_channels_data,
+        )
 
-    def forward(self, sample: torch.Tensor, condition: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(
+        self, sample: torch.Tensor, condition: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         mu, logvar = self.encoder(sample, condition)
         std = torch.exp(0.5 * logvar)
         epsilon = torch.randn_like(std)
@@ -173,10 +198,12 @@ class CVAE(nn.Module):
 
 
 class FiLMConditioningInjector(object):
-    def __init__(self,
-                 cond_dim: int,
-                 target_layer_types: tuple[Type[nn.Module], ...] = DEFAULT_FILM_TARGETS,
-                 output_dim_attrs: tuple[str, ...] = DEFAULT_OUTPUT_FEATURE_ATTRS):
+    def __init__(
+        self,
+        cond_dim: int,
+        target_layer_types: tuple[Type[nn.Module], ...] = DEFAULT_FILM_TARGETS,
+        output_dim_attrs: tuple[str, ...] = DEFAULT_OUTPUT_FEATURE_ATTRS,
+    ):
         self._cond_dim = cond_dim
         self._target_layer_types = target_layer_types
         self._output_dim_attrs = output_dim_attrs
@@ -199,17 +226,19 @@ class FiLMConditioningInjector(object):
                 new_layers.append(layer)
                 if isinstance(layer, self._target_layer_types):
                     layer_out_dim = self._infer_output_dim(layer)
-                    film_layer = FiLMLayer(cond_dim=self._cond_dim, num_channels=layer_out_dim)
+                    film_layer = FiLMLayer(
+                        cond_dim=self._cond_dim, num_channels=layer_out_dim
+                    )
                     new_layers.append(film_layer)
                     num_inserted_film += 1
-
 
     def _infer_output_dim(self, layer) -> int:
         for attr in self._output_dim_attrs:
             if hasattr(layer, attr):
                 return getattr(layer, attr)
-        raise ValueError(f'Cannot infer output dimensions for layer {layer.name} (Type: {type(layer).__name__})')
-
+        raise ValueError(
+            f"Cannot infer output dimensions for layer {layer.name} (Type: {type(layer).__name__})"
+        )
 
 
 class FiLMConditionedEncoder(nn.Module):
