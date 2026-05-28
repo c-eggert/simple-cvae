@@ -95,14 +95,15 @@ class Trainer:
         )
 
         self.history: dict[str, list[float]] = {
-            "train_loss": [], "val_loss": [],
-            "train_recon_loss": [], "val_recon_loss": [],
-            "train_kl_loss": [], "val_kl_loss": [],
+            "train_loss": [],
+            "val_loss": [],
+            "train_recon_loss": [],
+            "val_recon_loss": [],
+            "train_kl_loss": [],
+            "val_kl_loss": [],
         }
 
-    def _step(
-        self, batch
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def _step(self, batch) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Forward pass + loss computation. Returns (total, recon, latent)."""
         sample, condition = batch
         sample = sample.to(self.device)
@@ -175,7 +176,10 @@ class Trainer:
                     )
                 print(msg)
 
-            checkpoint_path = os.path.join('checkpoints', f"epoch_{epoch:0>4}_loss{'' if val_loss is None else val_loss}.pth")
+            checkpoint_path = os.path.join(
+                "checkpoints",
+                f"epoch_{epoch:0>4}_loss{'' if val_loss is None else val_loss}.pth",
+            )
             self.save(checkpoint_path)
 
     def save(self, path: str | Path) -> None:
