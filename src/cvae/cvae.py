@@ -100,7 +100,7 @@ class Encoder(nn.Module):
             out_channels=128,
             num_groups=8,
             stride=1,
-            padding=1,
+            padding=0,
         )
         self.latent_mu = nn.Linear(128, out_channels)
         self.latent_logvar = nn.Linear(128, out_channels)
@@ -134,8 +134,8 @@ class UpConvBlock(nn.Module):
             in_channels=in_channels_data,
             out_channels=out_channels,
             kernel_size=3,
-            stride=1,
-            padding=1,
+            stride=stride,
+            padding=padding,
         )
         self.norm = nn.GroupNorm(
             num_groups=num_groups, num_channels=out_channels, affine=False
@@ -158,15 +158,18 @@ class Decoder(nn.Module):
         self.unproject = nn.Linear(in_latent_dim, 128)
         self.up1 = UpConvBlock(128, in_channels_cond, 64, 8, 1, padding=1)
         self.up2 = UpConvBlock(64, in_channels_cond, 32, 8, 1, padding=1)
-        self.up3 = UpConvBlock(32, in_channels_cond, 16, 8, 1, padding=1)
-        self.up4 = UpConvBlock(16, in_channels_cond, out_channels, 4, 1, padding=1)
+        self.up3 = UpConvBlock(32, in_channels_cond, 16, 8, 1, padding=0)
+        self.up4 = UpConvBlock(16, in_channels_cond, 8, 4, 1, padding=1)
+        self.pred = nn.Conv2d(in_channels=8, out_channels=out_channels, kernel_size=1)
 
     def forward(self, sampled: torch.Tensor, condition: torch.Tensor) -> torch.Tensor:
-        x = self.unproject(sampled.view(sampled.shape[0], sampled.shape[1], 1, 1))
-        x = self.up1(x)
-        x = self.up2(x)
-        x = self.up3(x)
-        x = self.up4(x)
+        x = self.unproject(sampled)
+        x = x.view(x.shape[0], x.shape[1], 1, 1)
+        x = self.up1(x, condition)
+        x = self.up2(x, condition)
+        x = self.up3(x, condition)
+        x = self.up4(x, condition)
+        x = self.pred(x)
         return x
 
 
@@ -194,6 +197,7 @@ class CVAE(nn.Module):
         epsilon = torch.randn_like(std)
         z = mu + std * epsilon
         reconst = self.decoder(z, condition)
+        reconst = reconst[tuple(slice(s) for s in sample.shape)]
         return reconst, (mu, logvar)
 
 
