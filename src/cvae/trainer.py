@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import abc
 import os
 from pathlib import Path
 from typing import Callable, Optional, Tuple
@@ -10,26 +9,7 @@ import torch.nn as nn
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 
-
-class ConditionalGenerativeModel(nn.Module, abc.ABC):
-    """
-    Interface that every model passed to Trainer must satisfy.
-
-    forward() receives
-      - sample    : the tensor to be reconstructed   (B, *)
-      - condition : the conditioning tensor          (B, *)
-
-    forward() returns
-      - reconstruction : tensor with the same shape as `sample`
-      - latent_params  : tuple (mu, logvar), each of shape (B, latent_dim)
-    """
-
-    @abc.abstractmethod
-    def forward(
-        self, sample: torch.Tensor, condition: torch.Tensor
-    ) -> Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
-        raise NotImplementedError('Abstract "forward" method was not implemented.')
-
+from cvae.cvae import ConditionalGenerativeModel
 
 # (reconstruction, sample) -> scalar
 ReconLossFn = Callable[[torch.Tensor, torch.Tensor], torch.Tensor]

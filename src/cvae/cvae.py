@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import abc
-import warnings
 from typing import Type, Tuple
 
 import torch
 import torch.nn as nn
+from torch import nn as nn
 
 DEFAULT_FILM_TARGETS: tuple[Type[nn.Module], ...] = (
     nn.Conv2d,
@@ -74,58 +76,6 @@ class EncoderBase(nn.Module, abc.ABC):
         """Encode data into (mu, logvar) given a condition."""
 
 
-class Encoder(EncoderBase):
-    def __init__(self, in_channels_data: int, in_channels_cond: int, out_channels: int):
-        super(Encoder, self).__init__()
-        # VAE encoder layers
-        self.conv1 = ConvBlock(  # 11x11 -> 11x11
-            in_channels_data=in_channels_data,
-            in_channels_cond=in_channels_cond,
-            out_channels=16,
-            num_groups=4,
-            stride=1,
-            padding=1,
-        )
-        self.conv2 = ConvBlock(  # 11x11 -> 6x6
-            in_channels_data=16,
-            in_channels_cond=in_channels_cond,
-            out_channels=32,
-            num_groups=8,
-            stride=2,
-            padding=1,
-        )
-        self.conv3 = ConvBlock(  # 6x6 -> 3x3
-            in_channels_data=32,
-            in_channels_cond=in_channels_cond,
-            out_channels=64,
-            num_groups=8,
-            stride=2,
-            padding=1,
-        )
-        self.conv4 = ConvBlock(
-            in_channels_data=64,
-            in_channels_cond=in_channels_cond,
-            out_channels=128,
-            num_groups=8,
-            stride=1,
-            padding=0,
-        )
-        self.latent_mu = nn.Linear(128, out_channels)
-        self.latent_logvar = nn.Linear(128, out_channels)
-
-    def forward(
-        self, data: torch.Tensor, condition: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        x = self.conv1(data, condition)
-        x = self.conv2(x, condition)
-        x = self.conv3(x, condition)
-        x = self.conv4(x, condition)
-        x = torch.squeeze(x, dim=[-2, -1])
-        mu = self.latent_mu(x)
-        logvar = self.latent_logvar(x)
-        return mu, logvar
-
-
 class UpConvBlock(nn.Module):
     def __init__(
         self,
@@ -166,28 +116,27 @@ class DecoderBase(nn.Module, abc.ABC):
         """Decode a latent sample into a reconstruction given a condition."""
 
 
-class Decoder(DecoderBase):
-    def __init__(self, in_latent_dim: int, in_channels_cond: int, out_channels: int):
-        super(Decoder, self).__init__()
-        self.unproject = nn.Linear(in_latent_dim, 128)
-        self.up1 = UpConvBlock(128, in_channels_cond, 64, 8, 1, padding=1)
-        self.up2 = UpConvBlock(64, in_channels_cond, 32, 8, 1, padding=1)
-        self.up3 = UpConvBlock(32, in_channels_cond, 16, 8, 1, padding=0)
-        self.up4 = UpConvBlock(16, in_channels_cond, 8, 4, 1, padding=1)
-        self.pred = nn.Conv2d(in_channels=8, out_channels=out_channels, kernel_size=1)
+class ConditionalGenerativeModel(nn.Module, abc.ABC):
+    """
+    Interface that every model passed to Trainer must satisfy.
 
-    def forward(self, sampled: torch.Tensor, condition: torch.Tensor) -> torch.Tensor:
-        x = self.unproject(sampled)
-        x = x.view(x.shape[0], x.shape[1], 1, 1)
-        x = self.up1(x, condition)
-        x = self.up2(x, condition)
-        x = self.up3(x, condition)
-        x = self.up4(x, condition)
-        x = self.pred(x)
-        return x
+    forward() receives
+      - sample    : the tensor to be reconstructed   (B, *)
+      - condition : the conditioning tensor          (B, *)
+
+    forward() returns
+      - reconstruction : tensor with the same shape as `sample`
+      - latent_params  : tuple (mu, logvar), each of shape (B, latent_dim)
+    """
+
+    @abc.abstractmethod
+    def forward(
+        self, sample: torch.Tensor, condition: torch.Tensor
+    ) -> Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+        raise NotImplementedError('Abstract "forward" method was not implemented.')
 
 
-class CVAE(nn.Module):
+class CVAE(ConditionalGenerativeModel):
     def __init__(self, encoder: EncoderBase, decoder: DecoderBase):
         super(CVAE, self).__init__()
         self.encoder = encoder
