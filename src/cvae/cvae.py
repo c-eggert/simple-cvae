@@ -66,7 +66,15 @@ class ConvBlock(nn.Module):
         return x
 
 
-class Encoder(nn.Module):
+class EncoderBase(nn.Module, abc.ABC):
+    @abc.abstractmethod
+    def forward(
+        self, data: torch.Tensor, condition: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Encode data into (mu, logvar) given a condition."""
+
+
+class Encoder(EncoderBase):
     def __init__(self, in_channels_data: int, in_channels_cond: int, out_channels: int):
         super(Encoder, self).__init__()
         # VAE encoder layers
@@ -152,7 +160,13 @@ class UpConvBlock(nn.Module):
         return x
 
 
-class Decoder(nn.Module):
+class DecoderBase(nn.Module, abc.ABC):
+    @abc.abstractmethod
+    def forward(self, sampled: torch.Tensor, condition: torch.Tensor) -> torch.Tensor:
+        """Decode a latent sample into a reconstruction given a condition."""
+
+
+class Decoder(DecoderBase):
     def __init__(self, in_latent_dim: int, in_channels_cond: int, out_channels: int):
         super(Decoder, self).__init__()
         self.unproject = nn.Linear(in_latent_dim, 128)
@@ -174,20 +188,10 @@ class Decoder(nn.Module):
 
 
 class CVAE(nn.Module):
-    def __init__(
-        self, in_channels_data: int, in_channels_cond: int, latent_channels: int
-    ):
+    def __init__(self, encoder: EncoderBase, decoder: DecoderBase):
         super(CVAE, self).__init__()
-        self.encoder = Encoder(
-            in_channels_data=in_channels_data,
-            in_channels_cond=in_channels_cond,
-            out_channels=latent_channels,
-        )
-        self.decoder = Decoder(
-            in_latent_dim=latent_channels,
-            in_channels_cond=in_channels_cond,
-            out_channels=in_channels_data,
-        )
+        self.encoder = encoder
+        self.decoder = decoder
 
     def forward(
         self, sample: torch.Tensor, condition: torch.Tensor
