@@ -39,6 +39,7 @@ class InputEncoderCategoricalToOneHot(InputEncoder[int | enum.Enum, Tensor]):
         one_hot[index] = 1
         return one_hot
 
+    @property
     def output_dim(self) -> int:
         return self._num_classes
 
@@ -78,8 +79,8 @@ class InputEncoderNormalizedRange(InputEncoder[float, Tensor]):
 
         value_norm = (value - self._in_min) / (self._in_max - self._in_min)
         value_norm = value_norm * (self._out_max - self._out_min) + self._out_min
-        value_norm = torch.tensor(value_norm, dtype=self._dtype)
-        return value_norm
+        return torch.tensor([value_norm], dtype=self._dtype)
 
+    @property
     def output_dim(self) -> int:
         return 1
