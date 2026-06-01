@@ -1,5 +1,5 @@
 from .convert import InputEncoderCategoricalToOneHot, InputEncoderNormalizedRange
-from .cvae import CVAE
+from .cvae import CVAE, EncoderBase, DecoderBase
 from .trainer import (
     Trainer,
     mse_recon_loss,

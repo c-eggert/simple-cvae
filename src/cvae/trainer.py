@@ -165,14 +165,16 @@ class Trainer:
     def save(self, path: str | Path) -> None:
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
-        torch.save(
-            {
-                "model_state_dict": self.model.state_dict(),
-                "optimizer_state_dict": self.optimizer.state_dict(),
-                "history": self.history,
-            },
-            path,
-        )
+        checkpoint = {
+            "model_state_dict": self.model.state_dict(),
+            "optimizer_state_dict": self.optimizer.state_dict(),
+            "history": self.history,
+        }
+        if hasattr(self.model, "encoder"):
+            checkpoint["encoder_state_dict"] = self.model.encoder.state_dict()
+        if hasattr(self.model, "decoder"):
+            checkpoint["decoder_state_dict"] = self.model.decoder.state_dict()
+        torch.save(checkpoint, path)
 
     def load(self, path: str | Path) -> None:
         path = Path(path)

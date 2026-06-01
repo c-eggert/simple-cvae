@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import abc
+from pathlib import Path
 from typing import Type, Tuple
 
 import torch
@@ -75,6 +76,20 @@ class EncoderBase(nn.Module, abc.ABC):
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Encode data into (mu, logvar) given a condition."""
 
+    def save(self, path: str | Path) -> None:
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        torch.save(self.state_dict(), path)
+
+    def load(self, path: str | Path) -> None:
+        path = Path(path)
+        try:
+            device = next(self.parameters()).device
+        except StopIteration:
+            device = torch.device("cpu")
+        state_dict = torch.load(path, map_location=device, weights_only=True)
+        self.load_state_dict(state_dict)
+
 
 class UpConvBlock(nn.Module):
     def __init__(
@@ -115,6 +130,20 @@ class DecoderBase(nn.Module, abc.ABC):
     def forward(self, sampled: torch.Tensor, condition: torch.Tensor) -> torch.Tensor:
         """Decode a latent sample into a reconstruction given a condition."""
 
+    def save(self, path: str | Path) -> None:
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        torch.save(self.state_dict(), path)
+
+    def load(self, path: str | Path) -> None:
+        path = Path(path)
+        try:
+            device = next(self.parameters()).device
+        except StopIteration:
+            device = torch.device("cpu")
+        state_dict = torch.load(path, map_location=device, weights_only=True)
+        self.load_state_dict(state_dict)
+
 
 class ConditionalGenerativeModel(nn.Module, abc.ABC):
     """
@@ -152,6 +181,18 @@ class CVAE(ConditionalGenerativeModel):
         reconst = self.decoder(z, condition)
         reconst = reconst[tuple(slice(s) for s in sample.shape)]
         return reconst, (mu, logvar)
+
+    def save_encoder(self, path: str | Path) -> None:
+        self.encoder.save(path)
+
+    def load_encoder(self, path: str | Path) -> None:
+        self.encoder.load(path)
+
+    def save_decoder(self, path: str | Path) -> None:
+        self.decoder.save(path)
+
+    def load_decoder(self, path: str | Path) -> None:
+        self.decoder.load(path)
 
 
 class FiLMConditioningInjector(object):
