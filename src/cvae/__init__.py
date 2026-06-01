@@ -1,5 +1,6 @@
 from .convert import InputEncoderCategoricalToOneHot, InputEncoderNormalizedRange
 from .cvae import CVAE, EncoderBase, DecoderBase
+from .evaluation import ConditionPredictor, MSEByCategoryEvaluation, ConditionalPredictionEvaluation
 from .schema import ConditionSchema, ConditionVariable
 from .trainer import (
     Trainer,

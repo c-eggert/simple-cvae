@@ -63,3 +63,12 @@ class ConditionSchema:
         """Encode one sample.  Missing keys raise ``KeyError``."""
         parts = [v.encoder.encode(values[v.name]) for v in self._variables]
         return torch.cat(parts, dim=0)
+
+    def split(self, condition: torch.Tensor) -> dict[str, torch.Tensor]:
+        """Split a flat condition tensor (B, output_dim) into per-variable slices."""
+        result = {}
+        offset = 0
+        for v in self._variables:
+            result[v.name] = condition[..., offset : offset + v.output_dim]
+            offset += v.output_dim
+        return result
