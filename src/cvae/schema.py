@@ -52,6 +52,10 @@ class ConditionSchema:
         return sum(v.output_dim for v in self._variables)
 
     @property
+    def variables(self) -> list[ConditionVariable]:
+        return list(self._variables)
+
+    @property
     def variable_names(self) -> list[str]:
         return [v.name for v in self._variables]
 
