@@ -96,3 +96,23 @@ class InputEncoderNormalizedRange(InputEncoder[float, Tensor]):
     @property
     def output_dim(self) -> int:
         return 1
+
+
+class InputEncoderBoolean(InputEncoder[bool, Tensor]):
+    def __init__(
+        self,
+        true_value: float = 1.0,
+        false_value: float = -1.0,
+        dtype=torch.float32,
+    ) -> None:
+        self._true_value = true_value
+        self._false_value = false_value
+        self._dtype = dtype
+
+    def encode(self, value: bool) -> Tensor:
+        scalar = self._true_value if value else self._false_value
+        return torch.tensor([scalar], dtype=self._dtype)
+
+    @property
+    def output_dim(self) -> int:
+        return 1
