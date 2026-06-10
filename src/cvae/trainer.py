@@ -174,6 +174,8 @@ class Trainer:
             checkpoint["encoder_state_dict"] = self.model.encoder.state_dict()
         if hasattr(self.model, "decoder"):
             checkpoint["decoder_state_dict"] = self.model.decoder.state_dict()
+            decoder_path = path.with_name(path.stem + "_decoder" + path.suffix)
+            torch.save(self.model.decoder.state_dict(), decoder_path)
         torch.save(checkpoint, path)
 
     def load(self, path: str | Path) -> None:
