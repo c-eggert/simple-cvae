@@ -63,7 +63,7 @@ class Encoder(EncoderBase):
 
 class Decoder(DecoderBase):
     def __init__(self, in_latent_dim: int, in_channels_cond: int, out_channels: int):
-        super(Decoder, self).__init__()
+        super(Decoder, self).__init__(in_latent_dim)
         self.unproject = nn.Linear(in_latent_dim, 128)
         self.up1 = UpConvBlock(128, in_channels_cond, 64, 8, 1, padding=1)
         self.up2 = UpConvBlock(64, in_channels_cond, 32, 8, 1, padding=1)

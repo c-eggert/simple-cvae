@@ -126,6 +126,10 @@ class UpConvBlock(nn.Module):
 
 
 class DecoderBase(nn.Module, abc.ABC):
+    def __init__(self, latent_dim: int) -> None:
+        super().__init__()
+        self.latent_dim = latent_dim
+
     @abc.abstractmethod
     def forward(self, sampled: torch.Tensor, condition: torch.Tensor) -> torch.Tensor:
         """Decode a latent sample into a reconstruction given a condition."""

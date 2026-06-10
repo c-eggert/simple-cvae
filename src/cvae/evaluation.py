@@ -201,9 +201,6 @@ class ConditionalPredictionEvaluation:
         An EncoderBase to use as the predictor backbone.  Pass
         ``copy.deepcopy(model.encoder)`` to start from the CVAE's learned
         weights, or a fresh instance to train from scratch.
-    latent_dim:
-        Size of the latent vector ``z`` (must match what the CVAE was trained
-        with).
     device:
         Compute device.  Auto-detected when ``None``.
     num_ranged_steps:
@@ -220,7 +217,6 @@ class ConditionalPredictionEvaluation:
         model: CVAE,
         schema: ConditionSchema,
         predictor_encoder: EncoderBase,
-        latent_dim: int,
         device: Optional[str | torch.device] = None,
         num_ranged_steps: int = 10,
         num_samples_per_condition: int = 16,
@@ -229,9 +225,9 @@ class ConditionalPredictionEvaluation:
         self.device = torch.device(device) if device else _default_device()
         self.model = model.to(self.device).eval()
         self.schema = schema
-        self.latent_dim = latent_dim
+        self.latent_dim = model.decoder.latent_dim
         self.predictor = ConditionPredictor(
-            predictor_encoder, schema, latent_dim
+            predictor_encoder, schema, self.latent_dim
         ).to(self.device)
         self.num_ranged_steps = num_ranged_steps
         self.num_samples_per_condition = num_samples_per_condition
