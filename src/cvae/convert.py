@@ -10,7 +10,7 @@ InputT = TypeVar("InputT")
 OutputT = TypeVar("OutputT")
 
 
-class InputEncoder(abc.ABC, Generic[InputT, OutputT]):
+class InputEncoder(abc.ABC, Generic[InputT, OutputT]): # pragma: no cover
     @abc.abstractmethod
     def encode(self, value: InputT) -> OutputT:
         raise NotImplementedError(
